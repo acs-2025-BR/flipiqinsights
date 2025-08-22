@@ -1,58 +1,373 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>FlipIQ Insights</title>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>FlipIQ Insights — Etsy Seller Reports (API‑Compliant)</title>
+  <meta name="description" content="FlipIQ Insights is a read‑only reporting tool for Etsy sellers. We generate private seller reports using the official Etsy Open API v3 with minimal scopes and no scraping." />
+  <meta property="og:title" content="FlipIQ Insights — Etsy Seller Reports" />
+  <meta property="og:description" content="Private, read‑only reports powered by the official Etsy Open API v3. Not a dashboard. Not endorsed by Etsy." />
+  <meta property="og:type" content="website" />
+  <meta name="theme-color" content="#0ea5e9" />
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='48' fill='%230ea5e9'/%3E%3Ctext x='50' y='58' text-anchor='middle' font-size='58' fill='white' font-family='Arial, Helvetica, sans-serif'%3EF%3C/text%3E%3C/svg%3E" />
   <style>
-    body {
-      font-family: Arial, sans-serif;
-      max-width: 700px;
-      margin: 40px auto;
-      padding: 24px;
-      background: #f9f9f9;
-      color: #222;
-      border-radius: 10px;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    /* ——— Base + Theme ——— */
+    :root{
+      --bg: #0b1220;          /* deep slate */
+      --bg2:#0e1726;          /* card base */
+      --fg: #e6f1ff;          /* text */
+      --muted:#a8b3cf;        /* secondary */
+      --brand:#0ea5e9;        /* cyan */
+      --accent:#22d3ee;       /* lighter cyan */
+      --ok:#10b981;           /* green */
+      --warn:#f59e0b;         /* amber */
+      --danger:#ef4444;       /* red */
+      --card: rgba(255,255,255,0.06);
+      --glass: rgba(255,255,255,0.08);
+      --ring: rgba(34,211,238,.4);
+      --shadow: 0 10px 30px rgba(0,0,0,.25), inset 0 0 0 1px rgba(255,255,255,.05);
+      --radius: 18px;
     }
-    h1 {
-      color: #2a7ae2;
+    html,body{height:100%;}
+    body{
+      margin:0; color:var(--fg); background: radial-gradient(1200px 800px at 10% 10%, rgba(34,211,238,.12), transparent 60%),
+                                      radial-gradient(1000px 700px at 90% 30%, rgba(14,165,233,.18), transparent 55%),
+                                      linear-gradient(180deg, #0a0f1a, #0b1220);
+      font:16px/1.6 system-ui, -apple-system, Segoe UI, Roboto, Inter, Helvetica, Arial, sans-serif;
+      letter-spacing:.2px;
+      overflow-x:hidden;
     }
-    h2 {
-      margin-top: 2em;
-      color: #444;
-    }
-    p {
-      line-height: 1.6;
-    }
-    .section {
-      margin-bottom: 2em;
-    }
-    small {
-      color: #888;
+
+    /* ——— Layout ——— */
+    .wrapper{max-width:1120px; margin:0 auto; padding:24px;}
+    header.nav{position:sticky; top:0; z-index:60; backdrop-filter:saturate(1.2) blur(12px); background:rgba(11,18,32,.6); border-bottom:1px solid rgba(255,255,255,.06)}
+    .nav-inner{display:flex; align-items:center; gap:18px; padding:14px 24px;}
+    .brand{display:flex; align-items:center; gap:10px; text-decoration:none; color:var(--fg);}
+    .brand .logo{width:32px; height:32px; border-radius:12px; background:linear-gradient(135deg, var(--brand), var(--accent)); display:grid; place-items:center; box-shadow: var(--shadow)}
+    .brand strong{font-size:18px; letter-spacing:.3px}
+    nav.menu{margin-left:auto; display:flex; gap:18px; flex-wrap:wrap}
+    nav.menu a{color:var(--muted); text-decoration:none; font-weight:600; padding:8px 12px; border-radius:12px;}
+    nav.menu a:hover{color:var(--fg); background:var(--glass)}
+    .cta{background:linear-gradient(135deg, var(--brand), var(--accent)); padding:10px 14px; border-radius:12px; color:#001018 !important; font-weight:800; box-shadow: var(--shadow)}
+
+    /* ——— Hero ——— */
+    .hero{display:grid; grid-template-columns: 1.2fr .8fr; gap:28px; align-items:center; padding:60px 24px 32px}
+    .card{background:var(--card); border-radius:var(--radius); box-shadow: var(--shadow); border:1px solid rgba(255,255,255,.06)}
+    .p-hero{padding:28px}
+    h1{font-size:clamp(28px, 4vw, 44px); line-height:1.1; margin:0 0 12px}
+    .lead{font-size: clamp(16px, 2.2vw, 19px); color:var(--muted)}
+    .hero-badges{display:flex; gap:10px; flex-wrap:wrap; margin:18px 0}
+    .badge{background:rgba(34,211,238,.08); border:1px solid var(--ring); color:#d7faff; padding:6px 10px; border-radius:999px; font-weight:700; font-size:12px}
+    .keypoints{display:grid; grid-template-columns:repeat(3,1fr); gap:14px; margin-top:18px}
+    .kp{padding:14px; background:rgba(255,255,255,.04); border-radius:14px; border:1px solid rgba(255,255,255,.06)}
+    .kp small{display:block; color:var(--muted)}
+
+    /* ——— Sections ——— */
+    section{scroll-margin-top:86px;}
+    .section{margin:52px 0}
+    .grid{display:grid; gap:18px}
+    .cols-2{grid-template-columns: repeat(2, 1fr)}
+    .cols-3{grid-template-columns: repeat(3, 1fr)}
+
+    .card.pad{padding:24px}
+    h2{font-size: clamp(22px, 3vw, 30px); margin:0 0 8px}
+    h3{font-size: clamp(18px, 2.5vw, 22px); margin:16px 0 6px}
+    p{margin:8px 0}
+    ul{margin:8px 0 8px 18px}
+    .muted{color:var(--muted)}
+
+    /* ——— Accordions (for Policies) ——— */
+    details{background:rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.07); border-radius:14px; padding:14px 16px}
+    details + details{margin-top:12px}
+    summary{cursor:pointer; font-weight:800}
+    summary::-webkit-details-marker{display:none}
+    summary:after{content:""; float:right; width:10px; height:10px; border-right:2px solid var(--muted); border-bottom:2px solid var(--muted); transform:rotate(-45deg) translateY(4px)}
+    details[open] summary:after{transform:rotate(45deg) translateY(-3px)}
+
+    /* ——— Code-ish chips ——— */
+    .chip{display:inline-block; padding:6px 10px; border-radius:10px; background:#0c1b2a; border:1px solid rgba(255,255,255,.08); font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size:13px}
+
+    /* ——— Footer ——— */
+    footer{margin-top:60px; padding:32px 24px; border-top:1px solid rgba(255,255,255,.06); background:rgba(0,0,0,.15)}
+    .fineprint{font-size:13px; color:#b7c7dd}
+
+    /* ——— Responsive ——— */
+    @media (max-width: 920px){
+      .hero{grid-template-columns: 1fr}
+      .keypoints{grid-template-columns: 1fr}
+      .cols-2{grid-template-columns: 1fr}
+      .cols-3{grid-template-columns: 1fr}
     }
   </style>
 </head>
 <body>
-  <h1>FlipIQ Insights</h1>
+  <header class="nav">
+    <div class="nav-inner wrapper">
+      <a class="brand" href="#top" aria-label="FlipIQ Home">
+        <span class="logo" aria-hidden="true">🔍</span>
+        <strong>FlipIQ Insights</strong>
+      </a>
+      <nav class="menu" aria-label="Primary">
+        <a href="#overview">Overview</a>
+        <a href="#how">How it works</a>
+        <a href="#compliance">Compliance</a>
+        <a href="#privacy">Privacy</a>
+        <a href="#terms">Terms</a>
+        <a class="cta" href="#contact">Contact</a>
+      </nav>
+    </div>
+  </header>
 
-  <div class="section">
-    <p>
-      FlipIQ Insights is a lightweight reporting tool that generates research summaries for shop owners based on their own Etsy sales data. The application does not alter or manage listings and is not a dashboard or marketplace replacement. It simply retrieves authorized shop data through the Etsy Open API and presents it in a private report format to help sellers better understand trends and performance.
-    </p>
-  </div>
+  <main id="top" class="wrapper">
+    <!-- Hero -->
+    <section id="overview" class="hero">
+      <div class="card p-hero">
+        <h1>Private, read‑only <span class="chip">reports</span> for Etsy sellers</h1>
+        <p class="lead">FlipIQ Insights generates <strong>seller‑only reports</strong> using the official Etsy Open API v3. No scraping. No storefront features. <strong>Not a dashboard</strong> — just clear, printable insight snapshots to help you run your shop.</p>
+        <div class="hero-badges">
+          <span class="badge">Read‑only scopes</span>
+          <span class="badge">API Terms aligned</span>
+          <span class="badge">No diversion of traffic</span>
+          <span class="badge">Freshness respected</span>
+        </div>
+        <div class="keypoints">
+          <div class="kp"><strong>Official OAuth</strong><small>Access granted by the shop owner, limited to minimal scopes.</small></div>
+          <div class="kp"><strong>Data snapshots</strong><small>Time‑stamped PDFs/CSVs for your records; not live dashboards.</small></div>
+          <div class="kp"><strong>Seller privacy</strong><small>No ads, no data resale, no third‑party sharing.</small></div>
+        </div>
+      </div>
+      <aside class="card p-hero" aria-label="Highlights">
+        <h3>What FlipIQ is (and isn’t)</h3>
+        <ul>
+          <li><strong>Is:</strong> A <em>reporting</em> utility that summarizes your own shop data.</li>
+          <li><strong>Is not:</strong> A marketplace, checkout, listing editor, or traffic diversion tool.</li>
+          <li><strong>Source:</strong> Only the <span class="chip">Etsy Open API v3</span> with your permission.</li>
+          <li><strong>Use case:</strong> Inventory & sales trend reports, fee breakdowns, and SKU velocity.</li>
+        </ul>
+        <p class="muted">“The term ‘Etsy’ is a trademark of Etsy, Inc. This application uses the Etsy API but is not endorsed or certified by Etsy.”</p>
+      </aside>
+    </section>
 
-  <h2>Privacy Policy</h2>
-  <div class="section">
-    <p>
-      FlipIQ Insights only accesses data from your Etsy shop after you grant explicit authorization through the official Etsy API. We do not store, sell, or share your data with third parties. Data is used only to generate reports for your own shop performance. No listing edits or customer data are modified by this application.
-    </p>
-  </div>
+    <!-- How it works -->
+    <section id="how" class="section">
+      <div class="grid cols-2">
+        <div class="card pad">
+          <h2>How it works</h2>
+          <ol>
+            <li><strong>Authorize</strong> via Etsy OAuth — you’ll see the exact scopes requested.</li>
+            <li><strong>We fetch</strong> only the data needed to compute your chosen report(s).</li>
+            <li><strong>We generate</strong> a private report (PDF/CSV) and notify you.</li>
+            <li><strong>We discard</strong> transient data after processing (see Privacy).</li>
+          </ol>
+          <p class="muted">All API interactions are rate‑limit friendly and respect Etsy’s data freshness requirements.</p>
+        </div>
+        <div class="card pad">
+          <h3>Scopes we request (read‑only)</h3>
+          <p class="muted">Exact scope names appear on Etsy’s OAuth screen. We use the minimum necessary to produce reports (examples below):</p>
+          <ul>
+            <li><span class="chip">shops_read</span> — read basic shop info.</li>
+            <li><span class="chip">listings_read</span> — read your listings & inventory attributes.</li>
+            <li><span class="chip">transactions_read</span> — read order summaries for reporting only.</li>
+          </ul>
+          <p class="muted"><strong>No write scopes</strong>. No listing creation, edits, or deletions. No checkout or messaging automation.</p>
+        </div>
+      </div>
+    </section>
 
-  <h2>Disclaimer</h2>
-  <div class="section">
-    <p>
-      The term “Etsy” is a trademark of Etsy, Inc. This application uses the Etsy API but is not endorsed or certified by Etsy, Inc.
-    </p>
-  </div>
+    <!-- Compliance -->
+    <section id="compliance" class="section">
+      <div class="grid cols-2">
+        <div class="card pad">
+          <h2>API & Policy Compliance</h2>
+          <ul>
+            <li><strong>No scraping:</strong> All data via the official Etsy API; no HTML parsing.</li>
+            <li><strong>Non‑endorsement:</strong> Trademark notice displayed; branding clearly distinct.</li>
+            <li><strong>Data Freshness:</strong> Listing content never older than <strong>6 hours</strong>; other Etsy content never older than <strong>24 hours</strong> when displayed inside the app.</li>
+            <li><strong>Minimal data:</strong> We only request & process what is necessary for the selected report.</li>
+            <li><strong>No diversion:</strong> We don’t redirect buyers or replicate Etsy features.</li>
+            <li><strong>Quality:</strong> The app is tested, stable, and support is available via email.</li>
+          </ul>
+        </div>
+        <div class="card pad">
+          <h3>Testing practices</h3>
+          <ul>
+            <li>Use Etsy <strong>Developer Mode</strong> for any shop used solely for testing.</li>
+            <li>Create <strong>draft</strong> or clearly labeled test listings (low price, no stock images).</li>
+            <li>Cancel accidental test orders immediately if they occur.</li>
+          </ul>
+          <p class="muted">We follow Etsy’s API testing guidance to avoid fraud‑like activity and unintended buyer impact.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Privacy Policy -->
+    <section id="privacy" class="section">
+      <div class="card pad">
+        <h2>Privacy Policy</h2>
+        <p class="muted">Last updated: <span id="pp-date">2025‑06‑16</span> <!-- TODO: update date --></p>
+
+        <details open>
+          <summary>1) What data we collect</summary>
+          <ul>
+            <li><strong>OAuth profile & shop metadata</strong> (read‑only), as authorized by you.</li>
+            <li><strong>Listings & order summaries</strong> needed to compute selected reports.</li>
+            <li><strong>Operational logs</strong> (request IDs, timestamps, non‑content error logs).</li>
+            <li><strong>Contact info</strong> you give us (e.g., email) for support and delivery of reports.</li>
+          </ul>
+        </details>
+
+        <details>
+          <summary>2) How we use your data</summary>
+          <ul>
+            <li>Generate your private PDF/CSV reports.</li>
+            <li>Provide support and improve reliability (e.g., diagnose failed jobs).</li>
+          </ul>
+          <p><strong>We do not</strong> train AI models on your Etsy content, sell your data, or share it with advertisers.</p>
+        </details>
+
+        <details>
+          <summary>3) Storage, retention & deletion</summary>
+          <ul>
+            <li><strong>Transient processing:</strong> raw API responses are kept only as long as needed to compute your report.</li>
+            <li><strong>Report files:</strong> stored for up to <strong>30 days</strong> by default, then deleted or anonymized. (You can request earlier deletion at any time.)</li>
+            <li><strong>Backups:</strong> encrypted and rotated; retention aligned to the above schedule.</li>
+          </ul>
+          <p>To delete your data, use the <a href="#deletion">Data Deletion Request</a> below.</p>
+        </details>
+
+        <details>
+          <summary>4) Security</summary>
+          <ul>
+            <li>Encryption in transit (HTTPS) and at rest where applicable.</li>
+            <li>Principle of least privilege for systems and personnel.</li>
+            <li>Secret management for API credentials; regular key rotation.</li>
+          </ul>
+        </details>
+
+        <details>
+          <summary>5) Legal bases & your rights</summary>
+          <ul>
+            <li><strong>Legal basis:</strong> contract necessity (providing your requested reports) and legitimate interest (service reliability and security).</li>
+            <li>You may request access, correction, export, or deletion of your data.</li>
+          </ul>
+          <p>Contact: <a href="mailto:your-email@example.com">your-email@example.com</a> <!-- TODO: replace with your support email --></p>
+        </details>
+      </div>
+    </section>
+
+    <!-- Terms of Service -->
+    <section id="terms" class="section">
+      <div class="card pad">
+        <h2>Terms of Service</h2>
+        <p class="muted">Last updated: <span id="tos-date">2025‑06‑16</span> <!-- TODO: update date --></p>
+
+        <details open>
+          <summary>1) Service description</summary>
+          <p>FlipIQ Insights is a <strong>read‑only reporting tool</strong> that generates private reports for the shop owner from Etsy’s Open API v3. <strong>It is not a dashboard, marketplace, or checkout</strong>. The service does not create, edit, or delete Etsy listings.</p>
+        </details>
+
+        <details>
+          <summary>2) Access & acceptable use</summary>
+          <ul>
+            <li>You will authenticate via Etsy OAuth and may revoke access at any time.</li>
+            <li>You will not use FlipIQ to scrape Etsy or circumvent Etsy’s Terms or rate limits.</li>
+            <li>Reports are for your internal use; do not republish Etsy content in ways that violate Etsy’s policies.</li>
+          </ul>
+        </details>
+
+        <details>
+          <summary>3) Fees</summary>
+          <p>If applicable, fees are disclosed before purchase and are billed by FlipIQ, not Etsy. Taxes may apply.</p>
+        </details>
+
+        <details>
+          <summary>4) Warranty & liability</summary>
+          <p><strong>Disclaimer:</strong> THE SERVICE IS PROVIDED “AS IS” WITHOUT WARRANTIES OF ANY KIND. To the maximum extent permitted by law, FlipIQ disclaims implied warranties, and liability is limited to the amount you paid in the last 12 months.</p>
+          <p class="muted">Required Etsy notice: “THIS APPLICATION IS SOLELY PROVIDED BY FLIPIQ INSIGHTS (THE ‘APPLICATION DEVELOPER’). ETSY, INC. AND ITS AFFILIATES ARE NOT THE APPLICATION DEVELOPER, DO NOT PROVIDE THE APPLICATION SERVICE, AND MAKE NO WARRANTIES OF ANY KIND WITH RESPECT TO THE APPLICATION OR DATA ACCESSED THROUGH IT.”</p>
+        </details>
+
+        <details>
+          <summary>5) Contact & support</summary>
+          <p>Email: <a href="mailto:your-email@example.com">your-email@example.com</a> <!-- TODO: replace with your support email --></p>
+          <p>We aim to respond within 2 business days.</p>
+        </details>
+      </div>
+    </section>
+
+    <!-- Data deletion request -->
+    <section id="deletion" class="section">
+      <div class="grid cols-2">
+        <div class="card pad">
+          <h2>Data Deletion Request</h2>
+          <p>To request deletion of your FlipIQ data (including stored report files and associated metadata), click the button below to email support. We’ll confirm deletion within 7 days, or sooner where required by law.</p>
+          <button id="deleteBtn" class="cta" style="border:none; cursor:pointer">Start deletion request</button>
+          <p class="muted" style="margin-top:8px">You can also revoke FlipIQ’s API access directly from your Etsy account at any time.</p>
+        </div>
+        <div class="card pad">
+          <h3>What gets deleted?</h3>
+          <ul>
+            <li>Report files (PDF/CSV) stored on our systems.</li>
+            <li>Associated metadata (job IDs, timestamps).</li>
+            <li>Support conversations (upon request, except where retention is required by law).</li>
+          </ul>
+          <p class="muted">System logs may be retained in anonymized form for security and auditing.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Contact -->
+    <section id="contact" class="section">
+      <div class="grid cols-2">
+        <div class="card pad">
+          <h2>Contact</h2>
+          <p>Questions about privacy, API compliance, or your reports? We’re happy to help.</p>
+          <ul>
+            <li>Email: <a href="mailto:your-email@example.com">your-email@example.com</a> <!-- TODO: replace --></li>
+            <li>Legal name: <span class="chip">YourCompany LLC</span> <!-- TODO: replace --></li>
+            <li>Business address: <span class="chip">Your Address, City, State/Region</span> <!-- TODO: replace --></li>
+          </ul>
+        </div>
+        <div class="card pad">
+          <h3>One‑page summary for Etsy</h3>
+          <ul>
+            <li><strong>Purpose:</strong> Read‑only <em>reports</em> for sellers using the official Etsy Open API v3.</li>
+            <li><strong>Non‑endorsement:</strong> Trademark notice shown site‑wide.</li>
+            <li><strong>No scraping / No dashboard:</strong> Snapshot reports only; freshness respected.</li>
+            <li><strong>Minimal scopes:</strong> shops_read, listings_read, transactions_read (examples; exact scopes shown in OAuth).</li>
+            <li><strong>Support:</strong> Email within 2 business days.</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="wrapper">
+      <p class="fineprint">© <span id="year"></span> FlipIQ Insights. All rights reserved.</p>
+      <p class="fineprint">“The term ‘Etsy’ is a trademark of Etsy, Inc. This application uses the Etsy API but is not endorsed or certified by Etsy.”</p>
+      <p class="fineprint">This website is informational and provides general policy language. It is not legal advice. Please consult your counsel to customize for your jurisdiction and business.</p>
+    </div>
+  </footer>
+
+  <script>
+    // Update year
+    document.getElementById('year').textContent = new Date().getFullYear();
+
+    // Data deletion mailto
+    document.getElementById('deleteBtn').addEventListener('click', () => {
+      const subj = encodeURIComponent('FlipIQ Data Deletion Request');
+      const body = encodeURIComponent([
+        'Hello FlipIQ Support,',
+        '',
+        'I request deletion of my data associated with:',
+        '- Etsy shop name: ______________________',
+        '- Etsy account email: __________________',
+        '- Approx. dates of use: ________________',
+        '',
+        'Please confirm once deletion is complete.\nThank you.'
+      ].join('\n'));
+      window.location.href = `mailto:your-email@example.com?subject=${subj}&body=${body}`; // TODO: replace support email
+    });
+  </script>
 </body>
 </html>
